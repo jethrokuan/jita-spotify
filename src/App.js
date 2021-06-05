@@ -28,6 +28,7 @@ function App() {
     ) {
       setAccessToken(window.localStorage.getItem("jita.access_token"));
       setRefreshToken(window.localStorage.getItem("jita.refresh_token"));
+      refreshAccessToken(refreshToken);
     } else if (code) {
       fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -57,29 +58,28 @@ function App() {
     }
   }, []);
 
+  const refreshAccessToken = (refreshToken) => {
+    if (refreshToken) {
+      fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: process.env.REACT_APP_SPOTIFY_CLIENT_ID,
+          client_secret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET,
+        }),
+      })
+        .then((resp) => resp.json())
+        .then((json) => {
+          const access_token = json["access_token"];
+          window.localStorage.setItem("jita.access_token", access_token);
+          setAccessToken(access_token);
+        });
+    }
+  };
+
   useEffect(() => {
-    const refreshTokenFn = () => {
-      if (refreshToken) {
-        fetch("https://accounts.spotify.com/api/token", {
-          method: "POST",
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            refresh_token: refreshToken,
-            client_id: process.env.REACT_APP_SPOTIFY_CLIENT_ID,
-            client_secret: process.env.REACT_APP_SPOTIFY_CLIENT_SECRET,
-          }),
-        })
-          .then((resp) => resp.json())
-          .then((json) => {
-            const access_token = json["access_token"];
-            window.localStorage.setItem("jita.access_token", access_token);
-            setAccessToken(access_token);
-          });
-      }
-    };
-
-    const interval = setInterval(refreshTokenFn, 36000);
-
+    const interval = setInterval(() => refreshAccessToken(refreshToken), 36000);
     return () => clearInterval(interval);
   }, [refreshToken]);
 
@@ -136,25 +136,47 @@ function App() {
         const soup = new JSSoup(text);
         const results = soup.find("div", "js-store").attrs["data-content"];
         const resultsObj = JSON.parse(decodeHTML(results));
-        if (resultsObj["store"]["page"]["data"]["results"].length === 0) {
-          setTab("No tab, sorry :(");
-          return;
+        let bestTab;
+        if (!resultsObj["store"]["page"]["data"]) {
+          let links = soup.findAll("a", "js-link-song").map((l) => {
+            return l.attrs.href;
+          });
+          if (links.length === 0) {
+            setTab("No tab, sorry :(");
+            return;
+          }
+          for (const link of links) {
+            let splits = link.split("-");
+            let type = splits[splits.length - 2];
+            if (type !== "official" && type !== "pro") {
+              bestTab = link;
+              break;
+            }
+          }
+        } else {
+          if (
+            resultsObj["store"]["page"]["data"]["results"] &&
+            resultsObj["store"]["page"]["data"]["results"].length === 0
+          ) {
+            setTab("No tab, sorry :(");
+            return;
+          }
+          bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"])[
+            "tab_url"
+          ];
         }
-        const bestTab = getBestTab(
-          resultsObj["store"]["page"]["data"]["results"]
-        );
-        const tabResponse = await fetch(
-          `https://cors.bridged.cc/${bestTab["tab_url"]}`
-        );
+
+        const tabResponse = await fetch(`https://cors.bridged.cc/${bestTab}`);
         const tabText = await tabResponse.text();
         const tabSoup = new JSSoup(tabText);
         const tabResults = tabSoup.find("div", "js-store").attrs[
           "data-content"
         ];
         const tabObj = JSON.parse(decodeHTML(tabResults));
-        const tab = String(
-          tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"]
-        );
+        const tabRaw = tabObj["store"]["tab"]
+          ? tabObj["store"]["tab"]["content"]
+          : tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"];
+        const tab = String(tabRaw);
         const cleanedTab = cleanTab(tab);
         setTab(cleanedTab);
       }
