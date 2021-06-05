@@ -4,8 +4,8 @@ import JSSoup from 'jssoup';
 function App() {
   const [accessToken, setAccessToken] = useState();
   const [refreshToken, setRefreshToken] = useState();
-  const [songInfo, setSongInfo] = useState();
-  const [songId, setSongId] = useState();
+  const [songArtist, setSongArtist] = useState("");
+  const [songTitle, setSongTitle] = useState("");
   const [tab, setTab] = useState("");
 
   const decodeHTML = (html) => {
@@ -13,8 +13,6 @@ function App() {
     txt.innerHTML = html;
     return txt.value;
   };
-
-  
 
   useEffect(() => {
     const queryString = window.location.search;
@@ -87,8 +85,8 @@ function App() {
           }
         }).then(resp => resp.json())
           .then(json => {
-            setSongInfo(json["item"]);
-            setSongId(json["item"]["id"]);
+            setSongArtist(json["item"]["artists"].map(a => a["name"]).join(", "));
+            setSongTitle(json["item"]["name"]);
           });
       }
     }
@@ -100,45 +98,43 @@ function App() {
 
   useEffect(() => {
     const getTab = async () => {
-      if (songId) {
-        const getBestTab = (results) => {
-          let filtered_results = results.filter( r => !r["marketing_type"]);
-          filtered_results.sort((a, b) => a["votes"] < b["votes"]);
-          return filtered_results[0];
-        }
-
-        const cleanTab = tab => {
-          return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
-        }
-        let strippedTitle = songInfo["name"].replace(/\(feat.*\)/g, '');
-        let search = encodeURI(`${songInfo["artists"][0]["name"]} ${strippedTitle}`);
-        let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
-        const response = await fetch(url)
-        const text = await response.text();
-        const soup = new JSSoup(text);
-        const results = soup.find("div", "js-store").attrs["data-content"];
-        const resultsObj = JSON.parse(decodeHTML(results));
-        if (resultsObj["store"]["page"]["data"]["results"].length === 0) {
-          setTab("No tab, sorry :(");
-          return;
-        }
-        const bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"]);
-        const tabResponse = await fetch(bestTab["tab_url"]);
-        const tabText = await tabResponse.text();
-        const tabSoup = new JSSoup(tabText);
-        const tabResults = tabSoup.find("div", "js-store").attrs["data-content"];
-        const tabObj = JSON.parse(decodeHTML(tabResults));
-        const tab = String(tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"]);
-        const cleanedTab = cleanTab(tab);
-        setTab(cleanedTab);
+      const getBestTab = (results) => {
+        let filtered_results = results.filter( r => !r["marketing_type"]);
+        filtered_results.sort((a, b) => a["votes"] < b["votes"]);
+        return filtered_results[0];
       }
+
+      const cleanTab = tab => {
+        return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
+      }
+      let strippedTitle = songTitle.replace(/\(feat.*\)/g, '');
+      let search = encodeURI(`${songArtist} ${strippedTitle}`);
+      let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
+      const response = await fetch(url)
+      const text = await response.text();
+      const soup = new JSSoup(text);
+      const results = soup.find("div", "js-store").attrs["data-content"];
+      const resultsObj = JSON.parse(decodeHTML(results));
+      if (resultsObj["store"]["page"]["data"]["results"].length === 0) {
+        setTab("No tab, sorry :(");
+        return;
+      }
+      const bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"]);
+      const tabResponse = await fetch(bestTab["tab_url"]);
+      const tabText = await tabResponse.text();
+      const tabSoup = new JSSoup(tabText);
+      const tabResults = tabSoup.find("div", "js-store").attrs["data-content"];
+      const tabObj = JSON.parse(decodeHTML(tabResults));
+      const tab = String(tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"]);
+      const cleanedTab = cleanTab(tab);
+      setTab(cleanedTab);
     }
     getTab();
-  }, [songId])
+  }, [songArtist, songTitle])
 
   return (
       <div className="App">
-      <h1 id="song-title">{songInfo && songInfo["name"]} - {songInfo && songInfo["artists"].map(a => a["name"]).join(", ")}</h1>
+      <h1 id="song-title">{songArtist} - {songTitle}</h1>
       <pre className="tab">{tab}</pre>
       </div>
   );
