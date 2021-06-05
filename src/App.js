@@ -56,7 +56,7 @@ function App() {
 %20user-read-email`;
       window.location.replace(url);
     }
-  }, []);
+  }, [refreshToken]);
 
   const refreshAccessToken = (refreshToken) => {
     if (refreshToken) {
