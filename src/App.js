@@ -70,9 +70,10 @@ function App() {
           });
       }
     }
-    setInterval(refreshTokenFn, 10000);
 
-    return () => clearInterval(refreshTokenFn);
+    const interval = setInterval(refreshTokenFn, 36000);
+
+    return () => clearInterval(interval);
   }, [refreshToken]);
 
   useEffect(() => {
@@ -91,9 +92,9 @@ function App() {
       }
     }
     getCurrentSong();
-    setInterval(getCurrentSong, 5000);
+    const interval = setInterval(getCurrentSong, 5000);
 
-    return () => clearInterval(getCurrentSong);
+    return () => clearInterval(interval);
   }, [accessToken]);
 
   useEffect(() => {
