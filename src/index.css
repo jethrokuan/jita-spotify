@@ -1,4 +1,67 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300&family=IBM+Plex+Sans+Condensed:wght@500&display=swap");
+body {
+  margin: 0;
+  padding: 0;
+}
+html {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+}
+
 pre {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+  padding: 0 5px;
+}
+
+.container {
+  max-width: 600px;
+}
+
+#song-info {
+  position: sticky;
+  top: 0;
+  padding: 15px 5px;
+  background: #fff;
+}
+
+#song-title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+#song-artist {
+  color: #999;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.btn {
+  font-size: 0.8rem;
+  padding: 9px 28px 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: normal;
+  display: inline-block;
+  text-align: center;
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
+  cursor: pointer;
+  border: 1px solid #ccc;
+}
+
+.flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: top;
+}
+
+.on {
+  color: #fff;
+  background-color: #1db954;
+  border-color: #fff;
+}
+
+.attribution {
+  font-size: 12px;
+  color: #aaa;
 }
