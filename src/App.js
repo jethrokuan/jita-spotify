@@ -28,7 +28,7 @@ function App() {
         method: "POST",
         body: new URLSearchParams({
           'grant_type': 'authorization_code',
-          'redirect_uri': 'http://localhost:3000/',
+          'redirect_uri': process.env.REACT_APP_CALLBACK_URI,
           'client_id': process.env.REACT_APP_SPOTIFY_CLIENT_ID,
           'client_secret': process.env.REACT_APP_SPOTIFY_CLIENT_SECRET,
           'code': code,
