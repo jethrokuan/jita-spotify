@@ -98,36 +98,38 @@ function App() {
 
   useEffect(() => {
     const getTab = async () => {
-      const getBestTab = (results) => {
-        let filtered_results = results.filter( r => !r["marketing_type"]);
-        filtered_results.sort((a, b) => a["votes"] < b["votes"]);
-        return filtered_results[0];
-      }
+      if (songArtist && songTitle) {
+        const getBestTab = (results) => {
+          let filtered_results = results.filter( r => !r["marketing_type"]);
+          filtered_results.sort((a, b) => a["votes"] < b["votes"]);
+          return filtered_results[0];
+        }
 
-      const cleanTab = tab => {
-        return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
+        const cleanTab = tab => {
+          return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
+        }
+        let strippedTitle = songTitle.replace(/\(feat.*\)/g, '');
+        let search = encodeURI(`${songArtist} ${strippedTitle}`);
+        let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
+        const response = await fetch(`https://cors.bridged.cc/${url}`)
+        const text = await response.text();
+        const soup = new JSSoup(text);
+        const results = soup.find("div", "js-store").attrs["data-content"];
+        const resultsObj = JSON.parse(decodeHTML(results));
+        if (resultsObj["store"]["page"]["data"]["results"].length === 0) {
+          setTab("No tab, sorry :(");
+          return;
+        }
+        const bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"]);
+        const tabResponse = await fetch(`https://cors.bridged.cc/${bestTab["tab_url"]}`);
+        const tabText = await tabResponse.text();
+        const tabSoup = new JSSoup(tabText);
+        const tabResults = tabSoup.find("div", "js-store").attrs["data-content"];
+        const tabObj = JSON.parse(decodeHTML(tabResults));
+        const tab = String(tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"]);
+        const cleanedTab = cleanTab(tab);
+        setTab(cleanedTab);
       }
-      let strippedTitle = songTitle.replace(/\(feat.*\)/g, '');
-      let search = encodeURI(`${songArtist} ${strippedTitle}`);
-      let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
-      const response = await fetch(url)
-      const text = await response.text();
-      const soup = new JSSoup(text);
-      const results = soup.find("div", "js-store").attrs["data-content"];
-      const resultsObj = JSON.parse(decodeHTML(results));
-      if (resultsObj["store"]["page"]["data"]["results"].length === 0) {
-        setTab("No tab, sorry :(");
-        return;
-      }
-      const bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"]);
-      const tabResponse = await fetch(bestTab["tab_url"]);
-      const tabText = await tabResponse.text();
-      const tabSoup = new JSSoup(tabText);
-      const tabResults = tabSoup.find("div", "js-store").attrs["data-content"];
-      const tabObj = JSON.parse(decodeHTML(tabResults));
-      const tab = String(tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"]);
-      const cleanedTab = cleanTab(tab);
-      setTab(cleanedTab);
     }
     getTab();
   }, [songArtist, songTitle])
