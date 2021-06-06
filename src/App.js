@@ -94,6 +94,9 @@ function App() {
         })
           .then((resp) => resp.json())
           .then((json) => {
+            if (!json["item"]) {
+              return;
+            }
             const artist = json["item"]["artists"]
               .map((a) => a["name"])
               .join(", ");
@@ -205,7 +208,7 @@ function App() {
   }, [songProgress, autoScroll]);
   return (
     <div className="container">
-      {songArtist && songTitle && songProgress && (
+      {songArtist && songTitle && songProgress ? (
         <section id="song-info">
           <div className="flex">
             <section id="song">
@@ -232,6 +235,13 @@ function App() {
             strokeColor="#C4DD85"
             trailColor="#D3D3D3"
           />
+        </section>
+      ) : (
+        <section>
+          <h2 className="not-playing">Play a song on Spotify to begin!</h2>
+          <p className="attribution">
+            Made with ❤ by <a href="https://www.jethro.dev">Jethro Kuan</a>
+          </p>
         </section>
       )}
 

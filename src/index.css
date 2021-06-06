@@ -15,6 +15,7 @@ pre {
 
 .container {
   max-width: 600px;
+  padding-left: 5px;
 }
 
 #song-info {
