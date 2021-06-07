@@ -46,7 +46,7 @@ function App() {
 %20user-read-email`;
       window.location.replace(url);
     }
-  }, [spotifyTokens.refresh_token]);
+  }, []);
 
   const refreshAccessToken = (refreshToken) => {
     if (refreshToken) {
