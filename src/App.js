@@ -3,13 +3,10 @@ import { Line } from "rc-progress";
 import JSSoup from "jssoup";
 
 function App() {
-  const [accessToken, setAccessToken] = useState();
-  const [refreshToken, setRefreshToken] = useState();
-  const [songArtist, setSongArtist] = useState();
-  const [songTitle, setSongTitle] = useState();
-  const [songProgress, setSongProgress] = useState();
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [spotifyTokens, setSpotifyTokens] = useState({});
+  const [song, setSong] = useState({});
   const [tab, setTab] = useState("");
+  const [autoScroll, setAutoScroll] = useState(true);
 
   const decodeHTML = (html) => {
     var txt = document.createElement("textarea");
@@ -26,9 +23,10 @@ function App() {
       window.localStorage.getItem("jita.access_token") &&
       window.localStorage.getItem("jita.refresh_token")
     ) {
-      setAccessToken(window.localStorage.getItem("jita.access_token"));
-      setRefreshToken(window.localStorage.getItem("jita.refresh_token"));
-      refreshAccessToken(refreshToken);
+      setSpotifyTokens({
+        access_token: window.localStorage.getItem("jita.access_token"),
+        refresh_token: window.localStorage.getItem("jita.refresh_token"),
+      });
     } else if (code) {
       fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -46,8 +44,10 @@ function App() {
           const refresh_token = json["refresh_token"];
           window.localStorage.setItem("jita.access_token", access_token);
           window.localStorage.setItem("jita.refresh_token", refresh_token);
-          setAccessToken(access_token);
-          setRefreshToken(refresh_token);
+          setSpotifyTokens({
+            access_token,
+            refresh_token,
+          });
         });
     } else {
       let clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
@@ -56,7 +56,7 @@ function App() {
 %20user-read-email`;
       window.location.replace(url);
     }
-  }, [refreshToken]);
+  }, [spotifyTokens.refresh_token]);
 
   const refreshAccessToken = (refreshToken) => {
     if (refreshToken) {
@@ -73,23 +73,31 @@ function App() {
         .then((json) => {
           const access_token = json["access_token"];
           window.localStorage.setItem("jita.access_token", access_token);
-          setAccessToken(access_token);
+          setSpotifyTokens((orig) => {
+            return {
+              ...orig,
+              access_token,
+            };
+          });
         });
     }
   };
 
   useEffect(() => {
-    const interval = setInterval(() => refreshAccessToken(refreshToken), 36000);
+    const interval = setInterval(
+      () => refreshAccessToken(spotifyTokens.refresh_token),
+      36000
+    );
     return () => clearInterval(interval);
-  }, [refreshToken]);
+  }, [spotifyTokens.refresh_token]);
 
   useEffect(() => {
     const getCurrentSong = () => {
-      if (accessToken) {
+      if (spotifyTokens.access_token) {
         fetch("https://api.spotify.com/v1/me/player/currently-playing", {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${spotifyTokens.access_token}`,
           },
         })
           .then((resp) => resp.json())
@@ -101,10 +109,10 @@ function App() {
               .map((a) => a["name"])
               .join(", ");
             const title = json["item"]["name"];
-            setSongArtist(artist);
-            setSongTitle(title);
-            setSongProgress({
-              length: json["item"]["duration_ms"],
+            setSong({
+              title,
+              artist,
+              song_length: json["item"]["duration_ms"],
               progress: json["progress_ms"],
             });
           });
@@ -114,11 +122,11 @@ function App() {
     const interval = setInterval(getCurrentSong, 5000);
 
     return () => clearInterval(interval);
-  }, [accessToken]);
+  }, [spotifyTokens.access_token]);
 
   useEffect(() => {
     const getTab = async () => {
-      if (songArtist && songTitle) {
+      if (song.artist && song.title) {
         const getBestTab = (results) => {
           let filtered_results = results.filter((r) => !r["marketing_type"]);
           filtered_results.sort((a, b) => a["votes"] < b["votes"]);
@@ -128,11 +136,13 @@ function App() {
         const cleanTab = (tab) => {
           return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
         };
-        let strippedTitle = songTitle
+        let strippedTitle = song.title
           .replace(/\(feat.*\)/g, "")
           .replace(/[!"#$%&()*+,-./:;<=>?@[\]^_`{|}~]/g, "");
 
-        let search = encodeURI(`${songArtist.split(", ")[0]} ${strippedTitle}`);
+        let search = encodeURI(
+          `${song.artist.split(", ")[0]} ${strippedTitle}`
+        );
         let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
         const response = await fetch(`https://cors.bridged.cc/${url}`);
         const text = await response.text();
@@ -185,10 +195,10 @@ function App() {
       }
     };
     getTab();
-  }, [songArtist, songTitle]);
+  }, [song.artist, song.title]);
 
   useEffect(() => {
-    if (songProgress && autoScroll) {
+    if (song.progress && autoScroll) {
       let height = Math.max(
         document.body.scrollHeight,
         document.body.offsetHeight,
@@ -198,22 +208,20 @@ function App() {
       );
 
       window.scrollTo({
-        top:
-          Math.max(0, songProgress["progress"] / songProgress["length"] - 0.1) *
-          height,
+        top: Math.max(0, song.progress / song.song_length - 0.1) * height,
         left: 0,
         behaviour: "smooth",
       });
     }
-  }, [songProgress, autoScroll]);
+  }, [song.progress, song.song_length, autoScroll]);
   return (
     <div className="container">
-      {songArtist && songTitle && songProgress ? (
+      {song.title ? (
         <section id="song-info">
           <div className="flex">
             <section id="song">
-              <h1 id="song-title">{songTitle}</h1>
-              <h2 id="song-artist">{songArtist}</h2>
+              <h1 id="song-title">{song.title}</h1>
+              <h2 id="song-artist">{song.artist}</h2>
             </section>
             <section>
               <button
@@ -230,7 +238,7 @@ function App() {
           </div>
 
           <Line
-            percent={(songProgress["progress"] / songProgress["length"]) * 100}
+            percent={(song.progress / song.song_length) * 100}
             strokeWidth="1"
             strokeColor="#C4DD85"
             trailColor="#D3D3D3"
