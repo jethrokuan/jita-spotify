@@ -19,15 +19,7 @@ function App() {
     const urlParams = new URLSearchParams(queryString);
     const code = urlParams.get("code");
 
-    if (
-      window.localStorage.getItem("jita.access_token") &&
-      window.localStorage.getItem("jita.refresh_token")
-    ) {
-      setSpotifyTokens({
-        access_token: window.localStorage.getItem("jita.access_token"),
-        refresh_token: window.localStorage.getItem("jita.refresh_token"),
-      });
-    } else if (code) {
+    if (code) {
       fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
         body: new URLSearchParams({
@@ -42,8 +34,6 @@ function App() {
         .then((json) => {
           const access_token = json["access_token"];
           const refresh_token = json["refresh_token"];
-          window.localStorage.setItem("jita.access_token", access_token);
-          window.localStorage.setItem("jita.refresh_token", refresh_token);
           setSpotifyTokens({
             access_token,
             refresh_token,
@@ -72,7 +62,6 @@ function App() {
         .then((resp) => resp.json())
         .then((json) => {
           const access_token = json["access_token"];
-          window.localStorage.setItem("jita.access_token", access_token);
           setSpotifyTokens((orig) => {
             return {
               ...orig,
