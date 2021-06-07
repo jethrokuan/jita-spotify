@@ -215,35 +215,38 @@ function App() {
     }
   }, [song.progress, song.song_length, autoScroll]);
   return (
-    <div className="container">
+    <div>
       {song.title ? (
-        <section id="song-info">
-          <div className="flex">
-            <section id="song">
-              <h1 id="song-title">{song.title}</h1>
-              <h2 id="song-artist">{song.artist}</h2>
-            </section>
-            <section>
-              <button
-                id="button-autoscroll"
-                className={"btn " + (autoScroll ? "on" : "")}
-                onClick={() => setAutoScroll((orig) => !orig)}
-              >
-                Autoscroll: {autoScroll ? "On" : "Off"}
-              </button>
-              <p className="attribution">
-                Made with ❤ by <a href="https://www.jethro.dev">Jethro Kuan</a>
-              </p>
-            </section>
-          </div>
+        <div className="whiteout">
+          <section id="song-info">
+            <div className="flex">
+              <section id="song">
+                <h1 id="song-title">{song.title}</h1>
+                <h2 id="song-artist">{song.artist}</h2>
+              </section>
+              <section>
+                <button
+                  id="button-autoscroll"
+                  className={"btn " + (autoScroll ? "on" : "")}
+                  onClick={() => setAutoScroll((orig) => !orig)}
+                >
+                  Autoscroll: {autoScroll ? "On" : "Off"}
+                </button>
+                <p className="attribution">
+                  Made with ❤ by{" "}
+                  <a href="https://www.jethro.dev">Jethro Kuan</a>
+                </p>
+              </section>
+            </div>
 
-          <Line
-            percent={(song.progress / song.song_length) * 100}
-            strokeWidth="1"
-            strokeColor="#C4DD85"
-            trailColor="#D3D3D3"
-          />
-        </section>
+            <Line
+              percent={(song.progress / song.song_length) * 100}
+              strokeWidth="1"
+              strokeColor="#C4DD85"
+              trailColor="#D3D3D3"
+            />
+          </section>
+        </div>
       ) : (
         <section>
           <h2 className="not-playing">Play a song on Spotify to begin!</h2>
