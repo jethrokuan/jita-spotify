@@ -1,18 +1,14 @@
 import { useState, useEffect } from "react";
 import { Line } from "rc-progress";
-import JSSoup from "jssoup";
 
 function App() {
   const [spotifyTokens, setSpotifyTokens] = useState({});
   const [song, setSong] = useState({});
-  const [tab, setTab] = useState("");
+  const [tabList, setTabList] = useState([]);
+  const [tabIndex, setTabIndex] = useState(-1);
+  const [tab, setTab] = useState({});
   const [autoScroll, setAutoScroll] = useState(true);
 
-  const decodeHTML = (html) => {
-    var txt = document.createElement("textarea");
-    txt.innerHTML = html;
-    return txt.value;
-  };
 
   useEffect(() => {
     const queryString = window.location.search;
@@ -41,7 +37,7 @@ function App() {
         });
     } else {
       let clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-      let callbackUri = encodeURI(process.env.REACT_APP_CALLBACK_URI);
+      let callbackUri = encodeURIComponent(process.env.REACT_APP_CALLBACK_URI);
       let url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${callbackUri}&scope=user-read-currently-playing
 %20user-read-email`;
       window.location.replace(url);
@@ -114,76 +110,28 @@ function App() {
   }, [spotifyTokens.access_token]);
 
   useEffect(() => {
-    const getTab = async () => {
+    const getTabs = async () => {
       if (song.artist && song.title) {
-        const getBestTab = (results) => {
-          let filtered_results = results.filter((r) => !r["marketing_type"]);
-          filtered_results.sort((a, b) => a["votes"] < b["votes"]);
-          return filtered_results[0];
+        const sortTabs = (results) => {
+          return results.filter((r) => !r["marketing_type"]).sort((a, b) => a["votes"] < b["votes"]);
         };
 
-        const cleanTab = (tab) => {
-          return tab.replace(/\[\/?tab\]/g, "").replace(/\[\/?ch\]/g, "");
-        };
         let strippedTitle = song.title
           .replace(/\(feat.*\)/g, "")
           .replace(/[!"#$%&()*+,-./:;<=>?@[\]^_`{|}~]/g, "");
 
-        let search = encodeURI(
-          `${song.artist.split(", ")[0]} ${strippedTitle}`
-        );
-        let url = `https://www.ultimate-guitar.com/search.php?search_type=title&value=${search}`;
-        const response = await fetch(`https://cors.bridged.cc/${url}`);
-        const text = await response.text();
-        const soup = new JSSoup(text);
-        const results = soup.find("div", "js-store").attrs["data-content"];
-        const resultsObj = JSON.parse(decodeHTML(results));
-        let bestTab;
-        if (!resultsObj["store"]["page"]["data"]) {
-          let links = soup.findAll("a", "js-link-song").map((l) => {
-            return l.attrs.href;
-          });
-          if (links.length === 0) {
-            setTab("No tab, sorry :(");
-            return;
-          }
-          for (const link of links) {
-            let splits = link.split("-");
-            let type = splits[splits.length - 2];
-            if (type !== "official" && type !== "pro") {
-              bestTab = link;
-              break;
-            }
-          }
-        } else {
-          if (
-            resultsObj["store"]["page"]["data"]["results"] &&
-            resultsObj["store"]["page"]["data"]["results"].length === 0
-          ) {
-            setTab("No tab, sorry :(");
-            return;
-          }
-          bestTab = getBestTab(resultsObj["store"]["page"]["data"]["results"])[
-            "tab_url"
-          ];
-        }
-
-        const tabResponse = await fetch(`https://cors.bridged.cc/${bestTab}`);
-        const tabText = await tabResponse.text();
-        const tabSoup = new JSSoup(tabText);
-        const tabResults = tabSoup.find("div", "js-store").attrs[
-          "data-content"
-        ];
-        const tabObj = JSON.parse(decodeHTML(tabResults));
-        const tabRaw = tabObj["store"]["tab"]
-          ? tabObj["store"]["tab"]["content"]
-          : tabObj["store"]["page"]["data"]["tab_view"]["wiki_tab"]["content"];
-        const tab = String(tabRaw);
-        const cleanedTab = cleanTab(tab);
-        setTab(cleanedTab);
+        let query = `${song.artist.split(", ")[0]} ${strippedTitle}`;
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/search`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({query: query})
+        });
+        const tablist = await response.json();
+        setTabList(sortTabs(tablist));
+        setTabIndex(0);
       }
     };
-    getTab();
+    getTabs();
   }, [song.artist, song.title]);
 
   useEffect(() => {
@@ -203,6 +151,23 @@ function App() {
       });
     }
   }, [song.progress, song.song_length, autoScroll]);
+
+  useEffect(() => {
+    if (tabList && tabIndex !== -1) {
+      const getTab = async () => {
+        const tabUrl = tabList[tabIndex]["tab_url"];
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/tab`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({url: tabUrl})
+        });
+        const tab = await response.json();
+        setTab(tab);
+      }
+      getTab();
+    }
+  }, [tabList, tabIndex]);
+
   return (
     <div>
       {song.title ? (
@@ -227,7 +192,19 @@ function App() {
                 </p>
               </section>
             </div>
-
+            <div className="flex" id="tabBar">
+              {tabList.slice(0, 10).map((tab, i) => {
+                return <button key={i} className="tabItem" onClick={() => setTabIndex(i)}>{i+1}</button>
+              })}
+            </div>
+            {tab.meta &&
+             <div className="flex" id="tabMeta">
+               {tab.meta.tuning && <div>Tuning: {tab.meta.tuning}</div>}
+               {tab.meta.capo && <div>Capo: {tab.meta.capo}</div>}
+               {tab.meta.key && <div>Key: {tab.meta.key}</div>}
+               {tab.meta.difficulty && <div>Difficulty: {tab.meta.difficulty}</div>}
+             </div>
+            }
             <Line
               percent={(song.progress / song.song_length) * 100}
               strokeWidth="1"
@@ -244,8 +221,9 @@ function App() {
           </p>
         </section>
       )}
-
-      <pre className="tab">{tab}</pre>
+      {tab &&
+        <pre className="tab">{tab.tab}</pre>
+      }
     </div>
   );
 }

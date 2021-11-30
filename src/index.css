@@ -66,3 +66,23 @@ pre {
   background: #fff;
   background-color: #fff;
 }
+
+#tabBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.tabItem {
+  flex-basis: 10%;
+}
+
+#tabMeta {
+  color: #aaa;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+#tabMeta > div {
+  margin: 5px;
+}
