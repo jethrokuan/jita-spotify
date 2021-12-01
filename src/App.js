@@ -123,10 +123,11 @@ function App() {
         let query = `${song.artist.split(", ")[0]} ${strippedTitle}`;
         const response = await fetch(`${process.env.REACT_APP_API_URL}/search`, {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({query: query})
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query })
         });
         const tablist = await response.json();
+        setTab({});
         setTabList(sortTabs(tablist));
         setTabIndex(0);
       }
@@ -158,8 +159,8 @@ function App() {
         const tabUrl = tabList[tabIndex]["tab_url"];
         const response = await fetch(`${process.env.REACT_APP_API_URL}/tab`, {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({url: tabUrl})
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: tabUrl })
         });
         const tab = await response.json();
         setTab(tab);
@@ -194,16 +195,16 @@ function App() {
             </div>
             <div className="flex" id="tabBar">
               {tabList.slice(0, 10).map((tab, i) => {
-                return <button key={i} className="tabItem" onClick={() => setTabIndex(i)}>{i+1}</button>
+                return <button key={i} className="tabItem" onClick={() => setTabIndex(i)}>{i + 1}</button>
               })}
             </div>
             {tab.meta &&
-             <div className="flex" id="tabMeta">
-               {tab.meta.tuning && <div>Tuning: {tab.meta.tuning}</div>}
-               {tab.meta.capo && <div>Capo: {tab.meta.capo}</div>}
-               {tab.meta.key && <div>Key: {tab.meta.key}</div>}
-               {tab.meta.difficulty && <div>Difficulty: {tab.meta.difficulty}</div>}
-             </div>
+              <div className="flex" id="tabMeta">
+                {tab.meta.tuning && <div>Tuning: {tab.meta.tuning}</div>}
+                {tab.meta.capo && <div>Capo: {tab.meta.capo}</div>}
+                {tab.meta.key && <div>Key: {tab.meta.key}</div>}
+                {tab.meta.difficulty && <div>Difficulty: {tab.meta.difficulty}</div>}
+              </div>
             }
             <Line
               percent={(song.progress / song.song_length) * 100}
