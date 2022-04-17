@@ -15,6 +15,25 @@ function App() {
     const urlParams = new URLSearchParams(queryString);
     const code = urlParams.get("code");
 
+    const handleError = (response) => {
+      if (response.ok) {
+        return response;
+      }
+      if (response.status === 400) {
+        // code is probably old, we just reauthorize
+        authorizeSpotify();
+      }
+      console.log(response);
+    }
+
+    const authorizeSpotify = () => {
+      let clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
+      let callbackUri = encodeURIComponent(process.env.REACT_APP_CALLBACK_URI);
+      let url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${callbackUri}&scope=user-read-currently-playing
+%20user-read-email`;
+      window.location.replace(url);
+    }
+
     if (code) {
       fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -26,7 +45,8 @@ function App() {
           code: code,
         }),
       })
-        .then((resp) => resp.json())
+        .then(handleError)
+        .then((response) => response.json())
         .then((json) => {
           const access_token = json["access_token"];
           const refresh_token = json["refresh_token"];
@@ -34,13 +54,9 @@ function App() {
             access_token,
             refresh_token,
           });
-        });
+        })
     } else {
-      let clientId = process.env.REACT_APP_SPOTIFY_CLIENT_ID;
-      let callbackUri = encodeURIComponent(process.env.REACT_APP_CALLBACK_URI);
-      let url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${callbackUri}&scope=user-read-currently-playing
-%20user-read-email`;
-      window.location.replace(url);
+      authorizeSpotify();
     }
   }, []);
 
